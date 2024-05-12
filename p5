@@ -1,0 +1,51 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Sample data
+sentences = ['I love coding', 'This movie is great', 'I hate rainy days', 'The pizza was bad']
+labels = np.array([1, 1, 0, 0])  # 1 for positive sentiment, 0 for negative sentiment
+
+# Tokenize the sentences
+tokenizer = Tokenizer(num_words=10000, oov_token='<OOV>')
+tokenizer.fit_on_texts(sentences)
+word_index = tokenizer.word_index
+
+# Convert sentences to sequences
+sequences = tokenizer.texts_to_sequences(sentences)
+
+# Pad sequences to make them of equal length
+max_length = max([len(seq) for seq in sequences])
+padded_sequences = pad_sequences(sequences, maxlen=max_length, padding='post')
+
+# Define the RNN model
+model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(input_dim=len(word_index) + 1, output_dim=16, input_length=max_length),
+    tf.keras.layers.SimpleRNN(32, return_sequences=True),
+    tf.keras.layers.GlobalAveragePooling1D(),
+    tf.keras.layers.Dense(1, activation='sigmoid')
+])
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(padded_sequences, labels, epochs=10, verbose=1)
+
+# Plot training history
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['loss'])
+plt.title('Model Training History')
+plt.xlabel('Epoch')
+plt.legend(['Accuracy', 'Loss'], loc='upper left')
+plt.show()
+
+# Test the model with new data
+test_sentences = ['This is amazing', 'I hate this']
+test_sequences = tokenizer.texts_to_sequences(test_sentences)
+padded_test_sequences = pad_sequences(test_sequences, maxlen=max_length, padding='post')
+
+predictions = model.predict(padded_test_sequences)
+for i, prediction in enumerate(predictions):
+    print(test_sentences[i], ": Positive" if prediction > 0.5 else ": Negative")
