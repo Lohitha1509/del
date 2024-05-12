@@ -1,0 +1,40 @@
+import tensorflow as tf
+from tensorflow.keras import layers, models, optimizers
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load and preprocess the dataset
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+x_train, x_test = x_train / 255.0, x_test / 255.0
+
+# Define the model with dropout
+model = models.Sequential([
+    layers.Flatten(input_shape=(28, 28)),
+    layers.Dense(128, activation='relu'),
+    layers.Dropout(0.4),  # Dropout layer with dropout rate of 0.4
+    layers.Dense(10, activation='softmax')
+])
+
+# Compile the model with gradient clipping
+optimizer = optimizers.Adam(clipvalue=0.5)  # Gradient clipping with clipvalue of 0.5
+model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
+
+# Evaluate the model
+loss, accuracy = model.evaluate(x_test, y_test)
+print(f'Loss: {loss}, Accuracy: {accuracy}')
+
+# Get the dropout rate
+dropout_rate = model.layers[2].rate
+print(f"Dropout rate: {dropout_rate}")
+
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
