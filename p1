@@ -1,0 +1,36 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+# Generate some dummy data for training
+np.random.seed(0)
+X_train = np.random.randn(1000, 100)
+y_train = np.random.randint(2, size=(1000,))
+
+input_dim = 100
+output_dim = 1
+
+model = Sequential()
+
+model.add(Dense(units=64, input_dim=input_dim, activation='linear'))
+
+model.add(Dense(units=128, activation='relu'))
+model.add(Dense(units=64, activation='relu'))
+model.add(Dense(units=32, activation='relu'))
+
+model.add(Dense(units=output_dim, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=20, batch_size=32, validation_split=0.2)
+
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.show()
