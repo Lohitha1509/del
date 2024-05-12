@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from keras.datasets import mnist
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.optimizers import SGD
+from keras.utils import to_categorical  # Importing to_categorical function
+
+# Load MNIST dataset
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = X_train.astype('float32') / 255.0
+X_test = X_test.astype('float32') / 255.0
+
+X_train = X_train.reshape((-1, 28 * 28))
+X_test = X_test.reshape((-1, 28 * 28))
+
+# Convert class vectors to binary class matrices (one-hot encoding)
+num_classes = 10
+y_train = to_categorical(y_train, num_classes)
+y_test = to_categorical(y_test, num_classes)
+
+# Define a function to create the model
+def create_model():
+    model = Sequential()
+    model.add(Dense(128, input_shape=(784,), activation='relu'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(num_classes, activation='softmax'))
+    return model
+
+# Define a function to train the model
+def train_model(optimizer, X_train, y_train, X_test, y_test, batch_size=64, epochs=10):
+    model = create_model()
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+    history = model.fit(X_train, y_train, batch_size=batch_size, epochs=epochs, validation_data=(X_test, y_test), verbose=1)
+    return history
+
+# Train the model using gradient descent
+gd_history = train_model('sgd', X_train, y_train, X_test, y_test)
+
+# Train the model using stochastic gradient descent
+sgd_history = train_model(SGD(learning_rate=0.01, momentum=0.9), X_train, y_train, X_test, y_test)
+
+# Plot the training and validation accuracy for gradient descent
+plt.plot(gd_history.history['accuracy'])
+plt.plot(gd_history.history['val_accuracy'])
+plt.title('Model Accuracy (Gradient Descent)')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
+
+# Plot the training and validation accuracy for stochastic gradient descent
+plt.plot(sgd_history.history['accuracy'])
+plt.plot(sgd_history.history['val_accuracy'])
+plt.title('Model Accuracy (Stochastic Gradient Descent)')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend(['Train', 'Validation'], loc='upper left')
+plt.show()
