@@ -1,0 +1,78 @@
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.datasets import fashion_mnist
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten, Layer
+import matplotlib.pyplot as plt
+
+# Load the Fashion MNIST dataset and take a smaller subset
+(x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+
+# Use a smaller subset of the dataset for quicker training
+subset_size = 1000
+x_train = x_train[:subset_size] / 255.0
+y_train = y_train[:subset_size]
+x_test = x_test[:200] / 255.0
+y_test = y_test[:200]
+
+# Model for Adversarial Training
+def create_model():
+    model = Sequential()
+    model.add(Flatten(input_shape=(28, 28)))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dense(10, activation='softmax'))
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    return model
+# Generate adversarial examples
+def generate_adversarial_examples(model, x, y, epsilon=0.1):
+    np.random_state = 100
+    perturbations = np.sign(np.random.randn(*x.shape))
+    x_adv = x + epsilon * perturbations
+    return np.clip(x_adv, 0, 1)
+
+# Tangent Prop regularization layer
+class TangentProp(Layer):
+    def call(self, x):
+        perturbation = tf.random.normal(shape=tf.shape(x), stddev=0.1)
+        return x + perturbation
+
+# Optimized tangent distance function
+def tangent_distance(x1, x2):
+    return np.linalg.norm(x1 - x2)
+
+# Train the model with Adversarial Training and plot the loss graph
+model = create_model()
+x_adv = generate_adversarial_examples(model, x_train, y_train)
+x_combined = np.concatenate([x_train, x_adv])
+y_combined = np.concatenate([y_train, y_train])
+history_adv = model.fit(x_combined, y_combined, epochs=5, validation_data=(x_test, y_test), verbose=0)
+
+# Apply Tangent Prop to the model
+model.add(TangentProp())
+history_tangent_prop = model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test), verbose=0)
+# Tangent Distance Classifier
+def classify_with_tangent_distance(x_train, y_train, x_test):
+    y_pred = []
+    for x in x_test:
+        distances = [tangent_distance(x, x_train[i]) for i in range(len(x_train))]
+        nearest_index = np.argmin(distances)
+        y_pred.append(y_train[nearest_index])
+    return np.array(y_pred)
+y_pred = classify_with_tangent_distance(x_train, y_train, x_test)
+
+# Evaluate the Tangent Distance Classifier
+accuracy = np.mean(y_pred == y_test)
+print(f'Tangent Distance Classifier Accuracy: {accuracy * 100:.2f}%')
+
+# Evaluate the Adversarially Trained model with Tangent Prop
+loss, accuracy = model.evaluate(x_test, y_test, verbose=0)
+print(f'Adversarially Trained Model with Tangent Prop Accuracy: {accuracy * 100:.2f}%')
+
+# Plot the loss graph
+plt.plot(history_adv.history['loss'], label='Adversarial Training Loss')
+plt.plot(history_tangent_prop.history['loss'], label='Tangent Prop Training Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Training Loss')
+plt.show()
